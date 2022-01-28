@@ -46,25 +46,24 @@ def update_invoice_relation_fields(env):
             """
             UPDATE account_move am
             SET (intrastat_transaction_id, intrastat_transport_id,
-                src_dest_country_id, intrastat_country, src_dest_region_id
+                src_dest_country_id, src_dest_region_id
                 ) = (ai.intrastat_transaction_id,
                 ai.intrastat_transport_id, ai.src_dest_country_id,
-                ai.intrastat_country, ai.src_dest_region_id)
+                ai.src_dest_region_id)
             FROM account_invoice ai
-            WHERE am.old_invoice_id = ai.id""",
+            WHERE am.id = ai.move_id""",
         )
         if openupgrade.table_exists(env.cr, "account_invoice_line"):
             openupgrade.logged_query(
                 env.cr,
                 """
                 UPDATE intrastat_product_computation_line ipcl
-                SET invoice_line_id = aml.id
+                SET invoice_line_id = (SELECT id FROM account_move_line aml WHERE aml.move_id = ai.move_id AND aml.account_id = ail.account_id LIMIT 1)
                 FROM account_invoice_line ail
-                JOIN account_move_line aml ON aml.old_invoice_line_id = ail.id
+                JOIN account_invoice ai ON ai.id = ail.invoice_id
                 WHERE ipcl.%(old_line_id)s = ail.id"""
                 % {"old_line_id": openupgrade.get_legacy_name("invoice_line_id")},
             )
-
 
 @openupgrade.migrate()
 def migrate(env, version):
