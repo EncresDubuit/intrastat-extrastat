@@ -357,13 +357,16 @@ class IntrastatProductDeclaration(models.Model):
         kg_uom = self._get_uom_refs("kg_uom")
         pce_uom_categ = self._get_uom_refs("pce_uom_categ")
         pce_uom = self._get_uom_refs("pce_uom")
+        pce_uom_categ_vol = self._get_uom_refs("pce_uom_categ_vol")
+        pce_uom_litre = self._get_uom_refs("pce_uom_litre")
+        pce_uom_categ_length = self._get_uom_refs("pce_uom_categ_length")
+        pce_uom_meter = self._get_uom_refs("pce_uom_meter")
         weight = suppl_unit_qty = 0.0
 
         if not source_uom:
             line_notes = [_("Missing unit of measure.")]
             self._format_line_note(inv_line, notedict, line_notes)
             return weight, suppl_unit_qty
-
         if intrastat_unit_id:
             target_uom = intrastat_unit_id.uom_id
             if not target_uom:
@@ -397,12 +400,12 @@ class IntrastatProductDeclaration(models.Model):
             weight = line_qty
         elif source_uom.category_id == weight_uom_categ:
             weight = source_uom._compute_quantity(line_qty, kg_uom)
-        elif source_uom.category_id == pce_uom_categ:
+        elif source_uom.category_id in (pce_uom_categ, pce_uom_categ_vol, pce_uom_categ_length):
             if not product.weight:  # re-create weight_net ?
                 line_notes = [_("Missing weight on product %s.") % product.display_name]
                 self._format_line_note(inv_line, notedict, line_notes)
                 return weight, suppl_unit_qty
-            if source_uom == pce_uom:
+            if source_uom in (pce_uom, pce_uom_litre, pce_uom_meter):
                 weight = product.weight * line_qty  # product.weight_net
             else:
                 # Here, I suppose that, on the product, the
@@ -495,7 +498,7 @@ class IntrastatProductDeclaration(models.Model):
     def _get_vat(self, inv_line, notedict):
         vat = False
         inv = inv_line.move_id
-        if self.declaration_type == "dispatches":
+        if self.declaration_type in ("dispatches", "arrivals"):
             vat = inv.commercial_partner_id.vat
             if vat:
                 if vat.startswith("GB"):
@@ -626,9 +629,7 @@ class IntrastatProductDeclaration(models.Model):
         domain = self._prepare_invoice_domain()
         order = "journal_id, name"
         invoices = self.env["account.move"].search(domain, order=order)
-
         for invoice in invoices:
-
             lines_current_invoice = []
             total_inv_accessory_costs_cc = 0.0  # in company currency
             total_inv_product_cc = 0.0  # in company currency
@@ -776,6 +777,10 @@ class IntrastatProductDeclaration(models.Model):
             "kg_uom": self.env.ref("uom.product_uom_kgm"),
             "pce_uom_categ": self.env.ref("uom.product_uom_categ_unit"),
             "pce_uom": self.env.ref("uom.product_uom_unit"),
+            "pce_uom_categ_vol": self.env.ref("uom.product_uom_categ_vol"),
+            "pce_uom_litre": self.env.ref("uom.product_uom_litre"),
+            "pce_uom_categ_length": self.env.ref("uom.uom_categ_length"),
+            "pce_uom_meter": self.env.ref("uom.product_uom_meter"),
         }
         return uom_refs[ref]
 
