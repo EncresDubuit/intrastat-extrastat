@@ -692,6 +692,9 @@ class IntrastatProductDeclaration(models.Model):
                 partner_country = self._get_partner_country(
                     inv_line, notedict, eu_countries
                 )
+                # When the country is the same as the company's country must be skipped.
+                if partner_country == self.company_id.country_id:
+                    continue
                 partner_country_code = (
                     invoice.commercial_partner_id._get_intrastat_country_code()
                 )
@@ -983,9 +986,9 @@ class IntrastatProductDeclaration(models.Model):
 
     def create_xls(self):
         if self.env.context.get("computation_lines"):
-            report_file = "instrastat_transactions"
+            report_file = "intrastat_transactions"
         else:
-            report_file = "instrastat_declaration_lines"
+            report_file = "intrastat_declaration_lines"
         return {
             "type": "ir.actions.report",
             "report_type": "xlsx",
@@ -1023,13 +1026,17 @@ class IntrastatProductDeclaration(models.Model):
         """
         return [
             "hs_code",
+            "product_origin_country_code",
             "product_origin_country",
+            "src_dest_country_code",
             "src_dest_country",
             "amount_company_currency",
+            "transaction_code",
             "transaction",
             "weight",
             "suppl_unit_qty",
             "suppl_unit",
+            "transport_code",
             "transport",
             "vat",
         ]
